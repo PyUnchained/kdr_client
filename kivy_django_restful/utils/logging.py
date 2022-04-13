@@ -8,7 +8,8 @@
   
 from functools import partial
 import io
-import pickle_storage.utils.logging as original_write_to_log
+from pickle_storage.utils.logging import write_to_log as original_write_to_log
+
 write_to_log = partial(original_write_to_log, log_tag='Kivy Django Restful')
 
 class TerminalNotificationStream(io.StringIO):

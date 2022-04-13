@@ -6,8 +6,7 @@
 # Compiled at: 2022-04-03 12:43:29
 # Size of source mod 2**32: 239 bytes
 import functools
-import pickle_storage.config.tools as base_get_settings_config
+from pickle_storage.config.tools import get_settings_config as base_get_settings_config
 get_settings_config = functools.partial(base_get_settings_config,
-  required_modules=[
- 'kivy_django_restful.config.defaults'])
+  required_modules=[ 'kivy_django_restful.config.defaults'])
 # okay decompiling tools.cpython-38.pyc

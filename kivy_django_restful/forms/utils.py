@@ -1,5 +1,5 @@
-from kivy_django_restful.forms import fields as form_fields
-from kivy_django_restful.utils import write_to_log
+from app.forms import fields as form_fields
+from app.utils import write_to_log
 
 def field_to_widget(name, base_field, form, *args, obj=None, **field_kwargs):
     """ Return a FieldWidget instance created from the given kwargs. """

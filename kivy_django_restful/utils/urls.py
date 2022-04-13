@@ -20,7 +20,7 @@ def import_class(import_string):
 
 
 def get_user_data_dir():
-    """ Based on the '_get_user_data_dir()' method of the 'kivy.app.App' Class. Sometimes
+    """ Based on the '_get_user_data_dir()' method of the 'kivy.kivy_django_restful.App' Class. Sometimes
     we need knowledge of the data_dir path even whilst the app itself isn't running. """
     from kivy_django_restful.config.tools import get_settings_config
     app_name = get_settings_config().APP_NAME
@@ -84,7 +84,7 @@ def request_okay(resp_data):
         return resp_data['okay']
     return True
 
-@catch_http_error
+
 def secure_get(url, *args, add_remote_to_path=True, append_slash=False, **request_kwargs):
     if add_remote_to_path:
         url = join_api_path((settings.REMOTE_URL), url, append_slash=append_slash)
@@ -94,7 +94,7 @@ def secure_get(url, *args, add_remote_to_path=True, append_slash=False, **reques
      request_okay(resp_data), resp_data)
 
 
-@catch_http_error
+
 def secure_post(url, *args, append_slash=True, **request_kwargs):
     url = join_api_path((settings.REMOTE_URL), url, append_slash=append_slash)
     r = (requests.post)(url, **request_kwargs)
@@ -103,7 +103,7 @@ def secure_post(url, *args, append_slash=True, **request_kwargs):
      request_okay(resp_data), resp_data)
 
 
-@catch_http_error
+
 def secure_put(url, *args, **request_kwargs):
     url = join_api_path((settings.REMOTE_URL), url, append_slash=True)
     r = (requests.put)(url, **request_kwargs)
@@ -112,7 +112,7 @@ def secure_put(url, *args, **request_kwargs):
      request_okay(resp_data), resp_data)
 
 
-@catch_http_error
+
 def secure_delete(url, *args, **request_kwargs):
     url = join_api_path((settings.REMOTE_URL), url, append_slash=True)
     r = (requests.delete)(url, **request_kwargs)

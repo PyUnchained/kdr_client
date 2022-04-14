@@ -15,8 +15,8 @@ from kivy.metrics import dp
 
 from kivy_django_restful.utils import import_class, write_to_log
 from kivy_django_restful.uix.forms.utils import field_to_widget
-from kivy_django_restful.uix.forms.fields.base import FieldGroup
-from app import settings
+from kivy_django_restful.uix.forms.fields.base import FieldGroupWidget
+from kivy_django_restful.config import settings
 
 
 Builder.load_string("""
@@ -42,7 +42,7 @@ class FormWidget(ScrollView):
     form_class = ObjectProperty()
     initial = ObjectProperty({})
     obj = ObjectProperty()
-    font_color = ListProperty(colors.black)
+    font_color = ListProperty([1,1,1,1])
     field_height = NumericProperty(50)
     field_renderers = ObjectProperty({})
     validation_errors = ObjectProperty({})
@@ -92,7 +92,7 @@ class FormWidget(ScrollView):
 
     def get_fields(self):
         for child in self.ids["content"].children:
-            if isinstance(child, FieldGroup):
+            if isinstance(child, FieldGroupWidget):
                 for field_instance in child.children:
                     yield field_instance
             else:
@@ -247,7 +247,7 @@ class FormWidget(ScrollView):
 
             # Group of fields
             else:
-                group = FieldGroup()
+                group = FieldGroupWidget()
                 for field_name in element:
                     field_instance = field_map.get(field_name)
 

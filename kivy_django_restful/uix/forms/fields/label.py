@@ -12,7 +12,7 @@ Builder.load_string("""
     canvas.before:
         # Draw border
         Color:
-            rgba: colors.rms_green
+            rgba: [1,1,1,1]
         Line:
             width: 1
             rectangle: self.x, self.y, self.width, 1

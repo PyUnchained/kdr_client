@@ -9,7 +9,6 @@ from kivy.uix.behaviors import FocusBehavior
 
 from kivy_django_restful.utils import write_to_log
 
-__all__ = ["BaseInput"]
 
 Builder.load_string("""
 <BaseInput>:

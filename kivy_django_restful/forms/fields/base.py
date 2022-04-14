@@ -16,9 +16,8 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 
-from app.uix import colors
-from app.utils import write_to_log, import_class
-from app.uix.forms.utils import field_to_widget
+from kivy_django_restful.utils import write_to_log, import_class
+from kivy_django_restful.uix.forms.utils import field_to_widget
 from .label import FieldLabel
 
 
@@ -139,7 +138,7 @@ class FieldMeta(dict):
 
 class BaseFieldWidget(HideShowMixin, FloatLayout):
     bg_color = ListProperty([1,1,1,1])
-    border_color = ListProperty(colors.green)
+    border_color = ListProperty([0,1,0,1])
     border_width = NumericProperty(1)
     color = ListProperty([0,0,0,0])
     field_height = FIELD_HEIGHT
@@ -206,7 +205,7 @@ class BaseFieldWidget(HideShowMixin, FloatLayout):
 
     @property
     def app(self):
-        return App.get_running_app()
+        return kivy_django_restful.get_running_app()
 
     @property
     def _is_hidden(self):
@@ -288,7 +287,7 @@ class BaseFieldWidget(HideShowMixin, FloatLayout):
     def invalid_input_animation(self):
         orig_border_color = copy(self.border_color)
         fade_anim = Animation(
-            border_color=colors.red,
+            border_color=[1,0,0,1],
             border_width=2, duration=.3, s=1/15)
         restore_anim = Animation(border_color=orig_border_color,
                           border_width=1, duration=.3, s=1/15)
@@ -332,3 +331,25 @@ class BaseFieldWidget(HideShowMixin, FloatLayout):
         
         if self.value != None:
             self.verbose_value = str(self.value)
+
+class BaseKivyField():
+    widget_path = None
+    field_widget = None
+
+    def __init__(self, *args, **kwargs):
+        self.default = kwargs.pop("default", None)
+        self.null = kwargs.pop("null", False)
+        if not self.widget_path:
+            raise RuntimeError("Field Class Improperly Configured: "
+                "Not path given to import the widget used to display "
+                "this field.")
+        self.verbose_name = kwargs.pop("verbose_name", "")
+        super().__init__(*args, **kwargs)
+
+    @property
+    def WidgetClass(self):
+        try:
+            return import_class(self.widget_path)
+        except AttributeError:
+            write_to_log("Most likely means that the given path "
+                "did not contain the expected Class.", level="error")

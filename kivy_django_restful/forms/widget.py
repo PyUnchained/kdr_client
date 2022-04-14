@@ -13,11 +13,10 @@ from kivy.uix.label import Label
 from kivy.metrics import dp
 
 
-from app.utils import import_class, write_to_log
-from app.uix.forms.utils import field_to_widget
-from app.uix.forms.fields.base import FieldGroup
-from app.uix import colors
-from app import settings
+from kivy_django_restful.utils import import_class, write_to_log
+from kivy_django_restful.forms.utils import field_to_widget
+from kivy_django_restful.forms.fields.base import FieldGroup
+from kivy_django_restful.config import settings
 
 
 Builder.load_string("""
@@ -43,7 +42,7 @@ class FormWidget(ScrollView):
     form_class = ObjectProperty()
     initial = ObjectProperty({})
     obj = ObjectProperty()
-    font_color = ListProperty(colors.black)
+    font_color = ListProperty([0,0,0,1])
     field_height = NumericProperty(50)
     field_renderers = ObjectProperty({})
     validation_errors = ObjectProperty({})

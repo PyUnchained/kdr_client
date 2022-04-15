@@ -182,7 +182,7 @@ class FormWidget(ScrollView):
             if widget:
                 widget.show()
 
-    def render_field_widget(self, widget):
+    def render_field_widget(self, widget, holder=None):
 
         if not widget:
             return
@@ -193,7 +193,9 @@ class FormWidget(ScrollView):
         else:
             widget.height = widget.field_height
 
-        self.ids["content"].add_widget(widget)
+        if not holder:
+            holder = self.ids['content']
+        holder.add_widget(widget)
 
     def is_valid(self):
 
@@ -259,3 +261,39 @@ class FormWidget(ScrollView):
                             obj=self.obj))
                 widget = group
             self.render_field_widget(widget)
+
+    def update_contents(self, holder):
+        write_to_log("Fired")
+        
+        field_map = {}
+        for name, field in self._form.fields.items():
+            field_map[name] = field
+
+        # Convert layout into widgets
+        for element in self._form.layout:
+
+            # Single field
+            if isinstance(element, str):
+                field_name = element
+                field_instance = field_map.get(field_name)
+
+                if not field_instance:
+                    continue
+
+                widget = field_to_widget(field_name, field_instance, self,
+                    obj=self.obj)
+
+            # Group of fields
+            else:
+                group = FieldGroupWidget()
+                for field_name in element:
+                    field_instance = field_map.get(field_name)
+
+                    if not field_instance:
+                        continue
+
+                    group.add_widget(
+                        field_to_widget(field_name, field_instance, self,
+                            obj=self.obj))
+                widget = group
+            self.render_field_widget(widget, holder=holder)

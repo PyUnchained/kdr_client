@@ -1,4 +1,11 @@
-import asyncio, json, websockets, django, pathlib
+# decompyle3 version 3.8.0
+# Python bytecode 3.8.0 (3413)
+# Decompiled from: Python 3.8.12 (default, Jan 15 2022, 18:39:47) 
+# [GCC 7.5.0]
+# Embedded file name: /home/tatenda/workspace/kdr_package/kdr_client/kivy_django_restful/applet.py
+# Compiled at: 2022-04-08 13:48:47
+# Size of source mod 2**32: 3852 bytes
+import asyncio, json, websockets, django
 from django.core import management
 from kivy_django_restful.resources.managers import ResourceManager
 from kivy_django_restful.utils import import_class, write_to_log
@@ -14,7 +21,6 @@ class KDRApplet(EventDispatcher):
     backend_path = 'kivy_django_restful.backends.tastypie.TastyPieBackend'
 
     def __init__(self, *args, **kwargs):
-        django.setup()
         super().__init__()
         self._KDRApplet__logged_in_user = {}
         self.register_event_type('on_login_auth_accepted')
@@ -22,30 +28,13 @@ class KDRApplet(EventDispatcher):
         self.register_event_type('on_login_auth_rejected')
         self.ws_connection_factory = WebsocketConnectionFactory()
         self._backend = import_class(self.backend_path)(self)
+        self.setup()
         self.settings = ConfigObject(required_modules=[
          'kivy_django_restful.config.defaults'])
         self.resource_manager = ResourceManager(self)
         self.notification_manager = NotificationManager(self)
 
-    async def detect_setup(self):
-        """ Check whether the database file has already been created or not. """
-
-        await asyncio.sleep(5)
-        path_to_db = pathlib.Path(self.settings.BASE_DIR, self.settings.DB_NAME)
-        if not path_to_db.exists():
-            write_to_log('Detecting', level='error')
-            self.notification_manager.debug_message(
-                'Hi!\nThank-you for installing the app. Please wait a few seconds to '
-                'properly configure the database.\n\nWe only need to do this once.')
-            self.setup()
-
-
-
     async def async_login(self, username, password):
-        if not username or not password:
-            self.notification_manager.debug_message(f'Please enter username and password')
-            return
-
         self.notification_manager.debug_message(f'attempting to login as "{username}"')
         try:
             async with self.ws_connection_factory.open(f"{self.settings.REMOTE_WS_URL}login") as ws:
@@ -88,10 +77,11 @@ class KDRApplet(EventDispatcher):
     def on_login_auth_rejected(self):
         pass
 
-    # def setup(self):
-    #     if platform != 'android':
-    #         management.call_command('makemigrations')
-    #     management.call_command('migrate', no_input=True)
+    def setup(self):
+        django.setup()
+        if platform != 'android':
+            management.call_command('makemigrations')
+        management.call_command('migrate', no_input=True)
 
     def set_logged_in_user(self, username, api_key):
         self._KDRApplet__logged_in_user = {'username':username, 

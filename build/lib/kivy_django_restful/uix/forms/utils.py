@@ -12,7 +12,9 @@ def field_to_widget(name, base_field, form, *args, obj=None, **field_kwargs):
         else:
             base_field.label = name.replace("_", " ").title()
 
-        field_widget = base_field.WidgetClass(name, base_field, form, obj=obj)
+        field_widget = base_field.WidgetClass(name, base_field, form, obj=obj,
+            initial=form.initial.get(name))
+
         return field_widget
 
     except:

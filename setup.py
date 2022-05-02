@@ -7,6 +7,5 @@ setup(name='kivy-django-restful',
       description='Kivy-side Restful API Client',
       author='Tatenda Tambo',
       author_email='tatendatambo@gmail.com',
-      packages=find_packages(),
-      install_requires=['pickle-storage @ git+https://github.com/PyUnchained/pickle_storage.git@master']
+      packages=find_packages()
       )

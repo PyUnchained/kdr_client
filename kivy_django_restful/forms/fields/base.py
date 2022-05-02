@@ -18,7 +18,8 @@ from kivy.uix.textinput import TextInput
 
 from kivy_django_restful.utils import write_to_log, import_class
 from kivy_django_restful.uix.forms.utils import field_to_widget
-from .label import FieldLabel
+from kivy_django_restful.config import settings
+from kivy_django_restful.uix.forms.fields.label import FieldLabel
 
 
 
@@ -151,7 +152,8 @@ class BaseFieldWidget(HideShowMixin, FloatLayout):
     value = ObjectProperty()
     input_class_path = None
 
-    def __init__(self, name, base, form, *args, meta_overrides={}, obj=None, **kwargs):
+    def __init__(self, name, base, form, *args, meta_overrides={}, obj=None,
+        initial=None, **kwargs):
 
         # Basic sanity check
         if not self.input_class_path:
@@ -167,6 +169,7 @@ class BaseFieldWidget(HideShowMixin, FloatLayout):
         self.form = form
         self.hint_text = ''
         self.field_label_widget = None
+        self.initial = initial
 
         # Must use a copy of the dict, otherwise the same instance is shared
         # accross all field instances
@@ -175,6 +178,7 @@ class BaseFieldWidget(HideShowMixin, FloatLayout):
         self.meta = FieldMeta(base, meta_kwargs)
 
         super().__init__()
+
 
         for attribute_name, value in kwargs.items():
             if attribute_name != 'value':
@@ -311,7 +315,10 @@ class BaseFieldWidget(HideShowMixin, FloatLayout):
 
     def set_initial_value(self, *args, **kwargs):
         if not self.obj:
-            self.value = getattr(self._base, "default", None)
+            if self.initial:
+                self.value = initial
+            else:
+                self.value = getattr(self._base, "default", None)
         else:
             self.value = getattr(self.obj, self.name)
 

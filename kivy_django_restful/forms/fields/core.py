@@ -41,6 +41,9 @@ class ForeignKeyField(BaseKivyField, forms.CharField):
     def to_python(self, value):
         return value
 
+class GenericForeignKeyField(ForeignKeyField):
+    widget_path = f"{settings.FORM_FIELD_WIDGET_MODULE}.GenericForeignKeyWidget"
+
 class ManyToManyField(BaseKivyField, forms.ModelMultipleChoiceField):
 
     widget_path = f"{settings.FORM_FIELD_WIDGET_MODULE}.M2MRelatedField"

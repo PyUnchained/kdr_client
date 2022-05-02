@@ -20,7 +20,7 @@ async def get_generic_model_form_class(model_class, field_layout, *args,
     field_class_overrides = {}, **kwargs):
     """ Returns a generic KivyModelFormWidget for the specified model class.
     Allows customization of the form returned. """
-    
+
     ignored_fields = []
     model_field_mapping = {}
     renamed_fields = {} # Fields that explicitly define a "verbose_name" attribute
@@ -68,6 +68,7 @@ async def get_generic_model_form_class(model_class, field_layout, *args,
                     level="warning")
                 ignored_fields.append(field_name)
                 continue
+
 
         instance_kwargs = field_kwargs.get(field_name) or {}
         if field_name in renamed_fields:

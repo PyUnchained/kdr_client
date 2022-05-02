@@ -21,7 +21,7 @@ class BaseInput(EventDispatcher):
     activation_delay = 0.15
     parent_field_widget = ObjectProperty({})
     vertical_padding = NumericProperty(35)
-    x_padding = NumericProperty(dp(10))
+    x_padding = NumericProperty(dp(2))
     is_readonly = BooleanProperty(False)
 
     def __init__(self, *args, **kwargs):

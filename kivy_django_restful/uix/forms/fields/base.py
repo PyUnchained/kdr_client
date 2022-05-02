@@ -2,6 +2,10 @@ import datetime
 import itertools
 import functools
 from copy import copy
+import asyncio
+from asgiref.sync import sync_to_async
+
+from django.core.exceptions import SynchronousOnlyOperation
 
 from kivy.animation import Animation
 from kivy.app import App
@@ -250,7 +254,7 @@ class BaseFieldWidget(HideShowMixin, FloatLayout):
         self.input_widget = input_widget
         self.add_widget(input_widget)
     
-    def attach_field_label(self, *args, x_padding=dp(10), **kwargs):
+    def attach_field_label(self, *args, x_padding=dp(2), **kwargs):
 
         # Do nothing if hidden or already attached
         if self._is_hidden:
@@ -265,7 +269,7 @@ class BaseFieldWidget(HideShowMixin, FloatLayout):
                 opacity=0)
             self.add_widget(self.field_label_widget)
 
-        self.show_label()
+        Clock.schedule_once(self.show_label, 0.1)
 
     def get_hint_text(self):
         hint_text = self._base.label or ""
@@ -298,6 +302,11 @@ class BaseFieldWidget(HideShowMixin, FloatLayout):
         """ Hook called directly after the input widget has been added. """
         pass
 
+    # def on_pos(self, *args):
+    #     field_label = getattr(self, 'field_label_widget', None)
+    #     if field_label:
+    #         field_label.x = self.x + self.input_widget.x_padding
+
     def on_user_input(self, input, value):
         pass
     
@@ -313,11 +322,17 @@ class BaseFieldWidget(HideShowMixin, FloatLayout):
         if not self.obj:
             self.value = getattr(self._base, "default", None)
         else:
-            self.value = getattr(self.obj, self.name)
+            try:
+                self.value = getattr(self.obj, self.name)
+            except SynchronousOnlyOperation:
+                async def _set_value():
+                    self.value = await sync_to_async(getattr)(self.obj, self.name)
+                asyncio.create_task(_set_value())
 
     def show_label(self, *args, **kwargs):
         Animation(opacity=1, duration=0.3, s=1/15).start(
             self.field_label_widget)
+        self.field_label_widget.x = self.x + self.input_widget.x_padding
 
     def validate(self, *args, validator=None, **kwargs):
         """ Validate the current value of the field """

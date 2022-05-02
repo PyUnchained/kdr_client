@@ -42,7 +42,7 @@ class FormWidget(ScrollView):
     form_class = ObjectProperty()
     initial = ObjectProperty({})
     obj = ObjectProperty()
-    font_color = ListProperty([1,1,1,1])
+    font_color = ListProperty([0,0,0,1])
     field_height = NumericProperty(50)
     field_renderers = ObjectProperty({})
     validation_errors = ObjectProperty({})
@@ -262,38 +262,38 @@ class FormWidget(ScrollView):
                 widget = group
             self.render_field_widget(widget)
 
-    def update_contents(self, holder):
-        write_to_log("Fired")
+    # def update_contents(self, holder):
+    #     write_to_log("Fired")
         
-        field_map = {}
-        for name, field in self._form.fields.items():
-            field_map[name] = field
+    #     field_map = {}
+    #     for name, field in self._form.fields.items():
+    #         field_map[name] = field
 
-        # Convert layout into widgets
-        for element in self._form.layout:
+    #     # Convert layout into widgets
+    #     for element in self._form.layout:
 
-            # Single field
-            if isinstance(element, str):
-                field_name = element
-                field_instance = field_map.get(field_name)
+    #         # Single field
+    #         if isinstance(element, str):
+    #             field_name = element
+    #             field_instance = field_map.get(field_name)
 
-                if not field_instance:
-                    continue
+    #             if not field_instance:
+    #                 continue
 
-                widget = field_to_widget(field_name, field_instance, self,
-                    obj=self.obj)
+    #             widget = field_to_widget(field_name, field_instance, self,
+    #                 obj=self.obj)
 
-            # Group of fields
-            else:
-                group = FieldGroupWidget()
-                for field_name in element:
-                    field_instance = field_map.get(field_name)
+    #         # Group of fields
+    #         else:
+    #             group = FieldGroupWidget()
+    #             for field_name in element:
+    #                 field_instance = field_map.get(field_name)
 
-                    if not field_instance:
-                        continue
+    #                 if not field_instance:
+    #                     continue
 
-                    group.add_widget(
-                        field_to_widget(field_name, field_instance, self,
-                            obj=self.obj))
-                widget = group
-            self.render_field_widget(widget, holder=holder)
+    #                 group.add_widget(
+    #                     field_to_widget(field_name, field_instance, self,
+    #                         obj=self.obj))
+    #             widget = group
+    #         self.render_field_widget(widget, holder=holder)

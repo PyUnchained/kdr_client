@@ -139,7 +139,7 @@ class FormWidget(ScrollView):
         if settings.DEBUG:
             write_to_log(f"Validation error: {error_dict}")
 
-    def save(self):
+    def save(self, *args, **kwargs):
         """ Create and save an instance of the object. """
         data = self.form_data
         ModelClass = self.FormClass.model
@@ -166,7 +166,7 @@ class FormWidget(ScrollView):
                 if field_name not in m2m_fields:
                     setattr(instance, field_name, value)
 
-        instance.save()
+        instance.save(*arg, **kwargs)
 
         # Now associated the m2m field data with the new instance
         for field_name, data_list in m2m_data.items():

@@ -1,13 +1,5 @@
-# decompyle3 version 3.8.0
-# Python bytecode 3.8.0 (3413)
-# Decompiled from: Python 3.8.12 (default, Jan 15 2022, 18:39:47) 
-# [GCC 7.5.0]
-# Embedded file name: /home/tatenda/workspace/kdr_package/kdr_client/kivy_django_restful/utils/logging.py
-# Compiled at: 2022-04-03 05:40:49
-# Size of source mod 2**32: 796 bytes
-  
 from functools import partial
-import io
+import io, time
 from pickle_storage.utils.logging import write_to_log as original_write_to_log
 
 write_to_log = partial(original_write_to_log, log_tag='Kivy Django Restful')
@@ -15,9 +7,40 @@ write_to_log = partial(original_write_to_log, log_tag='Kivy Django Restful')
 class TerminalNotificationStream(io.StringIO):
     __doc__ = " Redirects stdout/stderr output and makes it visible to the user\n    through the applet's notification system. "
 
-    def __init__(self, applet, *args, **kwargs):
+    def __init__(self, applet, *args, timeout=10, **kwargs):
         self.applet = applet
+        self.timeout = timeout
         (super().__init__)(*args, **kwargs)
 
     def write(self, s):
-        self.applet.notification_manager.debug_message(s)
+        self.applet.notification_manager.debug_message(s,
+            timeout=self.timeout)
+
+class TimedContext():
+
+    def __enter__(self):
+        """Start a new timer as a context manager"""
+        self.start()
+        return self
+
+    def __exit__(self, *exc_info):
+        """Stop the context manager timer"""
+        self.stop()
+
+    def __init__(self, name = None):
+        if name:
+            self.name = f' ({name})'
+        else:
+            self.name = ''
+        self._start_time = None
+
+    def start(self):
+        """Start a new timer"""
+        self._start_time = time.perf_counter()
+
+
+    def stop(self):
+        """Stop the timer, and report the elapsed time"""
+        elapsed_time = time.perf_counter() - self._start_time
+        self._start_time = None
+        write_to_log(f"Elapsed time{self.name}: {elapsed_time} seconds")

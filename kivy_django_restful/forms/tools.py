@@ -2,6 +2,7 @@ from asgiref.sync import sync_to_async
 import types
 
 from django.db.models import fields as django_fields_module
+from django.contrib.contenttypes.fields import GenericForeignKey
 
 from kivy_django_restful.utils import write_to_log
 from .fields import DJANGO_FIELD_MAPPING
@@ -16,22 +17,25 @@ def create_form_meta_class_attr(model_class, field_layout):
     return type("Meta", (), { "model":model_class, "fields":field_layout})
 
 async def get_generic_model_form_class(model_class, field_layout, *args,
-    base_classes = (KivyModelForm,), field_kwargs = {},
+    base_classes = (KivyModelForm,), field_instance_kwargs = {},
     field_class_overrides = {}, **kwargs):
     """ Returns a generic KivyModelFormWidget for the specified model class.
     Allows customization of the form returned. """
-    
+
     ignored_fields = []
     model_field_mapping = {}
     renamed_fields = {} # Fields that explicitly define a "verbose_name" attribute
 
     # Filter out rel objects, which represent reverse relations and not fields
-    fields_iterable = filter(lambda f: issubclass(f.__class__, django_fields_module.Field), 
-                             model_class._meta.get_fields())
-
+    def field_filter(f):
+        return issubclass(f.__class__,
+            django_fields_module.Field) or isinstance(f, GenericForeignKey)
+    fields_iterable = filter(field_filter, model_class._meta.get_fields())
+    
     for field in fields_iterable:
         model_field_mapping[field.name] = field
-        if field.name != field.verbose_name:
+        verbose_name = getattr(field, 'verbose_name', field.name)
+        if field.name != verbose_name:
             renamed_fields[field.name] = field.verbose_name
 
     if field_layout:
@@ -69,14 +73,14 @@ async def get_generic_model_form_class(model_class, field_layout, *args,
                 ignored_fields.append(field_name)
                 continue
 
-        instance_kwargs = field_kwargs.get(field_name) or {}
+        instance_kwargs = field_instance_kwargs.get(field_name) or {}
         if field_name in renamed_fields:
             instance_kwargs['verbose_name'] = renamed_fields[field_name]
         else:
             instance_kwargs['verbose_name'] = field_name
 
         # Define queryset for ManyToMany fields, if not already explicitly defined in
-        # "field_kwargs" dict. Make it a list to avoid asyncio drama
+        # "field_instance_kwargs" dict. Make it a list to avoid asyncio drama
         if related_model and "queryset" not in instance_kwargs:
             instance_kwargs['queryset'] = related_model.objects.all()
             

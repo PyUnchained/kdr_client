@@ -44,3 +44,11 @@ class TimedContext():
         elapsed_time = time.perf_counter() - self._start_time
         self._start_time = None
         write_to_log(f"Elapsed time{self.name}: {elapsed_time} seconds")
+
+def log_async_errors(f):
+    def wrapped_f(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except:
+            write_to_log(f"Exception occured in {f}", level='error')
+    return wrapped_f

@@ -30,11 +30,21 @@ class GzipClientProtocol(WebSocketClientProtocol):
         return headers
 
     async def recv(self, *args, **kwargs):
-        raw_json = await asyncio.wait_for((super().recv)(*args, **kwargs), timeout=(settings.WS_TIMEOUT))
+        from kivy_django_restful import kdr_applet
+        try:
+            raw_json = await asyncio.wait_for(
+                (super().recv)(*args, **kwargs),
+                    timeout=(settings.WS_TIMEOUT)
+            )
+        except asyncio.exceptions.TimeoutError:
+            kdr_applet.nm.generic_error_message()
+            return {}
+
         return json.loads(gzip.decompress(raw_json).decode())
 
     async def send(self, content):
-        await super().send(gzip.compress(json.dumps(content, indent=4).encode('utf-8')))
+        packet = gzip.compress(json.dumps(content, indent=4).encode('utf-8'))
+        await super().send(packet)
 
 
 class WebsocketConnectionFactory:

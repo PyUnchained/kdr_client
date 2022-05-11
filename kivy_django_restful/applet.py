@@ -129,6 +129,7 @@ class KDRApplet(EventDispatcher):
         if not reg_cls:
             write_to_log(f'Could not find requested register: "{name}"',
                 level='warning')
+            return
 
         for reg in self.active_registers:
             if isinstance(reg, reg_cls):

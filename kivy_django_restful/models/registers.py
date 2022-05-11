@@ -27,8 +27,6 @@ class BaseRegister(EventDispatcher):
         self.applet = applet
         if not self.exists():
             self._write_to_file([])
-            write_to_log(f'{self.field_name} register created: '
-                f'{self.path_to_file}')
 
         if self.applet.settings.DEBUG and platform != 'android':
             check_interval = 2
@@ -64,13 +62,17 @@ class BaseRegister(EventDispatcher):
             return []
 
     def _write_to_file(self, data_list):
-        if not isinstance(data_list, list):
-            write_to_log('Cannot save this content. Must be a list')
-            return False
+        try:
+            if not isinstance(data_list, list):
+                write_to_log('Cannot save this content. Must be a list')
+                return False
 
-        with self.path_to_file.open('w') as f:
-            f.write(json.dumps(data_list))
-        return True
+            with self.path_to_file.open('w') as f:
+                f.write(json.dumps(data_list))
+            return True
+        except:
+            write_to_log('Error writting to register file.',
+                level='error')
 
     @log_async_errors
     async def async_add_instance(self, instance):
@@ -114,6 +116,10 @@ class BaseRegister(EventDispatcher):
                 asyncio.create_task(
                     self.async_update_with_remote(recent_updates)
                 )
+
+        except FileNotFoundError:
+            self._write_to_file([])
+
         except:
             write_to_log('Something seems amiss.', level='error')
 
@@ -122,6 +128,7 @@ class BaseRegister(EventDispatcher):
 
     async def async_perform_update(self, recent_updates):
         try:
+            write_to_log('missing_obj')
             async with self.applet.ws_connection_factory.open(
                 f"{settings.REMOTE_WS_URL}app_sync") as ws:
 
@@ -130,12 +137,23 @@ class BaseRegister(EventDispatcher):
                     await ws.send({'data':chunk,
                         'type':self.ws_request_type})
                     resp = await ws.recv()
-                    if resp == {}:
-                        failed_to_sync.append(chunk)
-                        continue
 
-                    if not resp.get('okay', False):
+                    # Determine whether or not chunk needs to be retried
+                    if resp == {} or not resp.get('okay', False):
                         failed_to_sync.append(chunk)
+
+                    # Implement suggested fixes from the server, if any
+                    missing_fk_field = resp.get('missing_fk', None)
+                    if any([missing_fk_field]):
+                        for item in serializers.deserialize('json', chunk):
+                            obj = item
+                    else:
+                        obj = None
+
+                    if missing_fk_field:
+                        await self.async_update_missing_fk(ws, obj.object,
+                            missing_fk_field)
+
 
             if failed_to_sync:
                 self.fail_sync_counter += 1 
@@ -148,6 +166,15 @@ class BaseRegister(EventDispatcher):
             finally:
                 e = None
                 del e
+
+    async def async_update_missing_fk(self, ws, obj, field_name):
+        if not obj:
+            return
+
+        missing_obj = await sync_to_async(getattr)(obj, field_name)
+        data = serializers.serialize('json', [missing_obj])
+        await ws.send({'data':data, 'type':'missing_fk'})
+
 
 
 class CreationRegister(BaseRegister):

@@ -14,4 +14,5 @@ SECRET_KEY = str(uuid4())
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 USE_TZ = True
 WS_TIMEOUT = 15
+FORM_WIDGET_CLASS = 'kivy_django_restful.uix.forms.widget.FormWidget'
 # okay decompiling defaults.cpython-38.pyc

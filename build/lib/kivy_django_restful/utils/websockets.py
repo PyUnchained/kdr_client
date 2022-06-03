@@ -7,6 +7,8 @@
 # Size of source mod 2**32: 1696 bytes
 from websockets.client import WebSocketClientProtocol
 import json, websockets, asyncio, gzip
+import ssl
+import certifi
 from kivy_django_restful.config.tools import get_settings_config
 from kivy_django_restful.utils import write_to_log
 settings = get_settings_config()
@@ -30,15 +32,29 @@ class GzipClientProtocol(WebSocketClientProtocol):
         return headers
 
     async def recv(self, *args, **kwargs):
-        raw_json = await asyncio.wait_for((super().recv)(*args, **kwargs), timeout=(settings.WS_TIMEOUT))
+        from kivy_django_restful import kdr_applet
+        try:
+            raw_json = await asyncio.wait_for(
+                (super().recv)(*args, **kwargs),
+                    timeout=(settings.WS_TIMEOUT)
+            )
+        except asyncio.exceptions.TimeoutError:
+            return {}
+
         return json.loads(gzip.decompress(raw_json).decode())
 
     async def send(self, content):
-        await super().send(gzip.compress(json.dumps(content, indent=4).encode('utf-8')))
+        packet = gzip.compress(json.dumps(content, indent=4).encode('utf-8'))
+        await super().send(packet)
 
 
 class WebsocketConnectionFactory:
 
     def open(self, path):
-        return websockets.connect(path, create_protocol=GzipClientProtocol)
-# okay decompiling websockets.cpython-38.pyc
+        from kivy_django_restful import kdr_applet
+        connection_kwargs = {'create_protocol':GzipClientProtocol}
+        if not kdr_applet.settings.DEBUG:
+            connection_kwargs['ssl'] = ssl.create_default_context(
+                cafile=certifi.where())
+
+        return websockets.connect(path, **connection_kwargs)

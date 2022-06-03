@@ -34,10 +34,10 @@ class ResourceManager:
         tempramental, so we want to make sure we're received all of the packets
         we were expecting before runnin the loaddata command """
 
-        with TimedContext(name=f' In Memory {name}'):
+        if name != None and data != []:
             data = await self.clean_data(name, json.loads(data))
             self._deffered_data.extend(data)
-            self.applet.notification_manager.debug_message(f"{name} data found.")
+            self.applet.notification_manager.debug_message(f"{name} data found [{len(data)}].")
 
         if index == total-1:
             await self.write_data()
@@ -45,8 +45,14 @@ class ResourceManager:
 
     async def write_data(self):
         self.applet.notification_manager.debug_message(
-            f"All Data Found.\n\nWriting to database... ",
+            f"All Data Found.\n\nWriting to database.\n"
+            "(May take 1-2 min if you have a lot of records) ",
                 level='success', timeout=120)
+
+        # We need to modify the data slightly before loading it into the database
+        for item in self._deffered_data:
+            if 'tsuro_auth.systemuser' == item['model']:
+                item['pk'] = item['fields']['remote_pk']
 
         with TimedContext(name='Writing Data'):
             with create_tmp_file(json.dumps(self._deffered_data)) as tmp_path:

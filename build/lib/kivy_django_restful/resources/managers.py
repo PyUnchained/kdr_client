@@ -45,7 +45,7 @@ class ResourceManager:
 
     async def write_data(self):
         self.applet.notification_manager.debug_message(
-            f"All Data Found.\n\nWriting to database.\n"
+            f"All Data Found.\n\nWritting to database.\n"
             "(May take 1-2 min if you have a lot of records) ",
                 level='success', timeout=120)
 

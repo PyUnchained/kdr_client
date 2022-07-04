@@ -119,7 +119,8 @@ class KDRApplet(EventDispatcher):
             register = reg_cls(self)
             self.active_registers.append(register)
 
-    async def async_sync_data(self, *args):
+    async def async_sync_data(self, delay=0, *args, **kwargs):
+        await asyncio.sleep(delay)
         data_to_sync = {'update':[], 'create':[], 'delete':[]}
         update_model_order = ['tsuro_app.doe', 'tsuro_app.sire', 'tsuro_app.litter',
             'tsuro_app.weanergroup', 'tsuro_app.death']

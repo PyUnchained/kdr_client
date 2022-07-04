@@ -19,11 +19,13 @@ def import_class(import_string):
     return getattr(module, class_name)
 
 
-def get_user_data_dir():
+def get_user_data_dir(app_name=None):
     """ Based on the '_get_user_data_dir()' method of the 'kivy.kivy_django_restful.App' Class. Sometimes
     we need knowledge of the data_dir path even whilst the app itself isn't running. """
     from kivy_django_restful.config.tools import get_settings_config
-    app_name = get_settings_config().APP_NAME
+    if not app_name:
+        app_name = getattr(get_settings_config(), 'APP_NAME', '')
+
     if platform == 'ios':
         data_dir = expanduser(join('~/Documents', app_name))
     elif platform == 'android':

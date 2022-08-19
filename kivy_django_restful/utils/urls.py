@@ -7,7 +7,7 @@
 # Size of source mod 2**32: 5229 bytes
 
 from functools import partial, lru_cache
-import importlib, requests, os, wrapt
+import importlib, os, wrapt
 from os.path import dirname, join, exists, sep, expanduser, isfile
 from kivy.utils import platform
 from .logging import write_to_log

@@ -1,5 +1,5 @@
 import asyncio
-from asgiref.sync import sync_to_async
+
 import json
 import pathlib
 import websockets
@@ -10,7 +10,6 @@ from kivy.clock import Clock
 from kivy.properties import NumericProperty
 from kivy.event import EventDispatcher
 
-from django.core import serializers
 from pickle_storage.container import BaseStorageContainer
 
 from kivy_django_restful.utils import write_to_log, log_async_errors
@@ -79,8 +78,13 @@ class BaseRegister(EventDispatcher):
     async def async_add_instance(self, instance):
         # Ideally, all models should have a tracker, so we only serialize the fields
         # that have changed. If not, just do all of them
-        data = await sync_to_async(serializers.serialize,
-            thread_sensitive=False)("json",[instance], cls=CustomJsonEncoder)
+
+
+        # data = await sync_to_async(serializers.serialize,
+        #     thread_sensitive=False)("json",[instance], cls=CustomJsonEncoder)
+
+        ### Can't rely on django's serialization
+        data = []
         try:
             register_data = self._read_from_file()
             register_data.append(data)
@@ -148,8 +152,10 @@ class BaseRegister(EventDispatcher):
                         # Implement suggested fixes from the server, if any
                         missing_fk_field = resp.get('missing_fk', None)
                         if any([missing_fk_field]):
-                            for item in serializers.deserialize('json', chunk):
-                                obj = item
+                            ### Can't rely on django's serialization
+                            # for item in serializers.deserialize('json', chunk):
+                            #     obj = item
+                            obj = None
                         else:
                             obj = None
 
@@ -174,9 +180,8 @@ class BaseRegister(EventDispatcher):
         if not obj:
             return
 
-        missing_obj = await sync_to_async(getattr)(obj, field_name)
-        data = await sync_to_async(serializers.serialize)(
-            'json', [missing_obj], cls=CustomJsonEncoder)
+        missing_obj = getattr(obj, field_name)
+        data = {}
         await ws.send({'data':data, 'type':'missing_fk'})
 
 

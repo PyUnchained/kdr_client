@@ -1,23 +1,17 @@
-import asyncio, json, websockets, django, pathlib
+import asyncio, json, websockets, pathlib, pickle
 from websockets.exceptions import ConnectionClosed, ConnectionClosedOK
 from kivy.clock import Clock
 from kivy.event import EventDispatcher
 from kivy.utils import platform
 
-from pickle_storage.config.tools import ConfigObject
-from asgiref.sync import sync_to_async
-from django.core import management
-from django.contrib.auth import get_user_model
-from django.forms.models import model_to_dict
-from django.apps import apps
+from pickle_storage.config.tools import get_settings_config
 
-from kivy_django_restful.resources.managers import ResourceManager
 from kivy_django_restful.utils import import_class, write_to_log, TerminalNotificationStream
 from kivy_django_restful.utils.data_sync import deserialize_data
-from kivy_django_restful.utils.websockets import WebsocketConnectionFactory
 from kivy_django_restful.notifications import NotificationManager
 from kivy_django_restful.models.registers import CreationRegister, UpdateRegister
-from kivy_django_restful.utils.context_managers import KDRBusyContext
+from kivy_django_restful.utils.decorators import managed_ws_conn
+from kivy_django_restful.ws_requests.login import ws_request_login
 
 active_applet = None
 
@@ -26,21 +20,21 @@ class KDRApplet(EventDispatcher):
     backend_path = 'kivy_django_restful.backends.tastypie.TastyPieBackend'
 
     def __init__(self, *args, **kwargs):
-        django.setup()
+
         self.working = False
         self.db_ready = True
         super().__init__()
         self._KDRApplet__logged_in_user = {}
         self.register_event_type('on_login_auth_accepted')
-        self.register_event_type('on_login_auth_done')
+        self.register_event_type('on_user_data_fetched')
         self.register_event_type('on_login_auth_rejected')
         self.register_event_type('on_data_loaded')
+        self.register_event_type('on_login_complete')
         self.register_event_type('on_logout')
-        self.ws_connection_factory = WebsocketConnectionFactory()
+        self.register_event_type('on_user_data_fetch_error')
         self._backend = import_class(self.backend_path)(self)
-        self.settings = ConfigObject(required_modules=[
-         'kivy_django_restful.config.defaults'])
-        self.resource_manager = ResourceManager(self)
+        self.settings = get_settings_config(
+            required_modules=['kivy_django_restful.config.defaults'])
         self.notification_manager = NotificationManager(self)
         self.known_registers = {'create':CreationRegister,
             'update':UpdateRegister}
@@ -64,47 +58,82 @@ class KDRApplet(EventDispatcher):
             self.nm.debug_message(f'Please enter username and password')
             return
 
-        self.nm.debug_message(f'Logging in as {username}')
-        try:
-            async with self.ws_connection_factory.open(f"{self.settings.REMOTE_WS_URL}auth") as ws:
-                await ws.send({'username':username,  'password':password,  'type':'auth'})
+        await ws_request_login(new_account=new_account,
+            **{'username':username,  'password':password})
+    # @managed_ws_conn("auth")
+    # async def ws_request_login(self, ws, *args, **kwargs):
+    #     await ws.send({'type':'auth'} | kwargs)
+    #     msg = await ws.recv()
+    #     if msg == {}:
+    #         self.nm.generic_error_message()
+    #         self.working = False
+    #         return
 
-                with KDRBusyContext(self):
-                    msg = await ws.recv()
-                    if msg == {}:
-                        self.nm.generic_error_message()
-                        self.working = False
-                        return
+    #     if msg.get('okay', False):
+    #         self.dispatch(
+    #             'on_login_auth_accepted', username,
+    #             new_account=new_account)
+    #         self.nm.debug_message('Fetching data from server...')
 
-                    if msg.get('okay', False):
-                        self.dispatch('on_login_auth_accepted', username,
-                            new_account=new_account)
-                        await ws.send({'type': 'login_data'})
-                        expected = await ws.recv()
-                        self.nm.debug_message('Fetching data from server...')
-                        for i, name in enumerate(expected):
-                            data = await ws.recv()
-                            await self.resource_manager.load_data(
-                                data.get('resource_name', None),
-                                data.get('data', []),
-                                index=i, total=len(expected)
-                            )
-                        else:
-                            self.dispatch('on_login_auth_done')
+    #         # Get the number of items we can expect to receive
+    #         await ws.send({'type': 'login_data'})
+    #         expected = await ws.recv()
+    #         retrieved_data = []
 
-                    else:
-                        self.dispatch('on_login_auth_rejected',
-                            msg.get('msg', 'Login Rejected'))
-        except websockets.exceptions.InvalidStatusCode as e:
-            try:
-                write_to_log('Exception', level='warning', include_traceback=True)
-            finally:
-                e = None
-                del e
+    #         # retrieved_data stored locally
+    #         if self.settings.CACHE_LOGIN_DATA:
+    #             debug_data_path = pathlib.Path(
+    #                 self.settings.BASE_DIR,'debug_init.json')
+
+                
+    #             try:
+    #                 with debug_data_path.open('rb') as f:
+    #                     data = pickle.load(f) or []
+    #                     if data:
+    #                         retrieved_data = data
+    #             except (FileNotFoundError, EOFError):
+    #                 pass
+
+    #             except:
+    #                 write_to_log('Error', level='warning',
+    #                     include_traceback=True)
+
+
+    #         # Retrieve and store each chunk of data.
+    #         if retrieved_data == []:
+    #             for i, name in enumerate(expected):
+    #                 data = await ws.recv()
+    #                 if data:
+    #                     self.nm.debug_message(
+    #                         f"{data['resource_name']} [OK]")
+    #                     retrieved_data.append(data)
+
+            
+    #         if len(retrieved_data) == len(expected):
+    #             self.dispatch(
+    #                 'on_user_data_fetched', retrieved_data)
+
+    #             # Write retrieved data for later
+    #             if self.settings.CACHE_LOGIN_DATA:
+    #                 debug_data_path = pathlib.Path(
+    #                     self.settings.BASE_DIR,'debug_init.json')
+                    
+    #                 with debug_data_path.open('wb') as f:
+    #                     try:
+    #                         pickle.dump(retrieved_data, f)
+    #                     except:
+    #                         write_to_log('Error', level='warning',
+    #                             include_traceback=True)
+    #         else:
+    #             self.dispatch(
+    #                 'on_user_data_fetch_error',
+    #                 expected, retrieved_data)
+
+    #     else:
+    #         self.dispatch('on_login_auth_rejected',
+    #             msg.get('msg', 'Login Rejected'))
 
     async def async_logout(self, *args):
-        await sync_to_async(management.call_command)('flush', no_input=True,
-            interactive=False)
         self.dispatch('on_logout')        
 
     async def activate_registers(self, *register_classes):
@@ -121,75 +150,76 @@ class KDRApplet(EventDispatcher):
 
     async def async_sync_data(self, delay=0, *args, **kwargs):
         await asyncio.sleep(delay)
-        data_to_sync = {'update':[], 'create':[], 'delete':[]}
-        update_model_order = ['tsuro_app.doe', 'tsuro_app.sire', 'tsuro_app.litter',
-            'tsuro_app.weanergroup', 'tsuro_app.death']
+        write_to_log('### DEPRECATED', level='debug')
+        # data_to_sync = {'update':[], 'create':[], 'delete':[]}
+        # update_model_order = ['tsuro_app.doe', 'tsuro_app.sire', 'tsuro_app.litter',
+        #     'tsuro_app.weanergroup', 'tsuro_app.death']
 
-        async with await self.open_ws('app_sync') as ws:
+        # async with await self.open_ws('app_sync') as ws:
 
-            await ws.send({'type':'sync_full', 'username':self.username})
+        #     await ws.send({'type':'sync_full', 'username':self.username})
 
-            # Loop over all the data sent from the remote
-            self.remote_working = True
-            while self.remote_working:
-                try:
-                    data = await ws.recv()
-                    if not data:
-                        self.remote_working = False
-                        continue
+        #     # Loop over all the data sent from the remote
+        #     self.remote_working = True
+        #     while self.remote_working:
+        #         try:
+        #             data = await ws.recv()
+        #             if not data:
+        #                 self.remote_working = False
+        #                 continue
 
-                    action = data.get('action', None)
-                    if not action:
-                        continue
+        #             action = data.get('action', None)
+        #             if not action:
+        #                 continue
 
-                    data_to_sync[action].extend(
-                        json.loads(data['data']))
+        #             data_to_sync[action].extend(
+        #                 json.loads(data['data']))
                     
-                except ConnectionClosedOK:
-                    self.remote_working = False
-                except ConnectionClosed:
-                    self.remote_working = False
+        #         except ConnectionClosedOK:
+        #             self.remote_working = False
+        #         except ConnectionClosed:
+        #             self.remote_working = False
 
-        # Means that there isn't any data worth updating, stpo here
-        if not any([data_to_sync[key] for key in data_to_sync]):
-            return
+        # # Means that there isn't any data worth updating, stpo here
+        # if not any([data_to_sync[key] for key in data_to_sync]):
+        #     return
 
-        User = get_user_model()
-        user_list = await sync_to_async(list)(User.objects.all())
-        if not user_list:
-            return
-        else:
-            user = user_list[0]
+        # User = get_user_model()
+        # user_list = await sync_to_async(list)(User.objects.all())
+        # if not user_list:
+        #     return
+        # else:
+        #     user = user_list[0]
 
-        # We'll later want to report to the server which records were commited
-        committed_to_db = {'create':[], 'update':[], 'delete':[]}
+        # # We'll later want to report to the server which records were commited
+        # committed_to_db = {'create':[], 'update':[], 'delete':[]}
 
-        # Handling records that have been created and updated is the same process,
-        # but we always want to do the creation step first
-        for action in ['create', 'update']:
-            data_list = data_to_sync.get(action, None)
-            if not data_list:
-                continue
+        # # Handling records that have been created and updated is the same process,
+        # # but we always want to do the creation step first
+        # for action in ['create', 'update']:
+        #     data_list = data_to_sync.get(action, None)
+        #     if not data_list:
+        #         continue
 
-            for model in update_model_order:
-                for entry in data_list:
-                    if entry['model'] != model:
-                        continue
+        #     for model in update_model_order:
+        #         for entry in data_list:
+        #             if entry['model'] != model:
+        #                 continue
 
-                    try:
-                        await deserialize_data(entry, user=user)
-                        committed_to_db[action].append(entry['pk'])
-                    except:
-                        write_to_log(f'Failed to save record from remote {action}',
-                            level='warning', include_traceback=True)
-        # Means that there isn't any data worth updating, stpo here
-        if any([committed_to_db[key] for key in committed_to_db]):
-            write_to_log('Date synced to server.')
-        async with await self.open_ws('app_sync') as ws:
-            await ws.send({
-                'type':'sync_full_committed',
-                'username':self.username,
-                'committed_to_db':committed_to_db})
+        #             try:
+        #                 await deserialize_data(entry, user=user)
+        #                 committed_to_db[action].append(entry['pk'])
+        #             except:
+        #                 write_to_log(f'Failed to save record from remote {action}',
+        #                     level='warning', include_traceback=True)
+        # # Means that there isn't any data worth updating, stpo here
+        # if any([committed_to_db[key] for key in committed_to_db]):
+        #     write_to_log('Date synced to server.')
+        # async with await self.open_ws('app_sync') as ws:
+        #     await ws.send({
+        #         'type':'sync_full_committed',
+        #         'username':self.username,
+        #         'committed_to_db':committed_to_db})
 
 
 
@@ -229,7 +259,11 @@ class KDRApplet(EventDispatcher):
     def on_login_auth_accepted(self, username, *args, new_account=False):
         self.notification_manager.debug_message(f'Logged in as "{username}"')
 
-    def on_login_auth_done(self):
+    def on_user_data_fetched(self, *args, **kwargs):
+        """ Dispatched event hook. """
+        pass
+
+    def on_user_data_fetch_error(self, *args, **kwargs):
         """ Dispatched event hook. """
         pass
 
@@ -239,6 +273,9 @@ class KDRApplet(EventDispatcher):
 
     def on_data_loaded(self, *args):
         """ Dispatched event hook. """
+        pass
+
+    def on_login_complete(self, *args, **kwargs):
         pass
 
     def on_login_auth_rejected(self, *args):

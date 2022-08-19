@@ -7,14 +7,18 @@ write_to_log = partial(original_write_to_log, log_tag='Kivy Django Restful')
 class TerminalNotificationStream(io.StringIO):
     __doc__ = " Redirects stdout/stderr output and makes it visible to the user\n    through the applet's notification system. "
 
-    def __init__(self, applet, *args, timeout=10, **kwargs):
+    def __init__(self, applet, *args, display_to_user = True, timeout=10, **kwargs):
         self.applet = applet
         self.timeout = timeout
+        self.display_to_user = display_to_user
         (super().__init__)(*args, **kwargs)
 
     def write(self, s):
-        self.applet.notification_manager.debug_message(s,
-            timeout=self.timeout)
+        if self.display_to_user:
+            self.applet.notification_manager.debug_message(s,
+                timeout=self.timeout)
+        else:
+            write_to_log(s)
 
 class TimedContext():
 

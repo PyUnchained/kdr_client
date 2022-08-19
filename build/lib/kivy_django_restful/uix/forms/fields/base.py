@@ -3,7 +3,7 @@ import itertools
 import functools
 from copy import copy
 import asyncio
-from asgiref.sync import sync_to_async
+
 
 from django.core.exceptions import SynchronousOnlyOperation
 
@@ -322,12 +322,7 @@ class BaseFieldWidget(HideShowMixin, FloatLayout):
         if not self.obj:
             self.value = getattr(self._base, "default", None)
         else:
-            try:
-                self.value = getattr(self.obj, self.name)
-            except SynchronousOnlyOperation:
-                async def _set_value():
-                    self.value = await sync_to_async(getattr)(self.obj, self.name)
-                asyncio.create_task(_set_value())
+            self.value = getattr(self.obj, self.name)
 
     def show_label(self, *args, **kwargs):
         Animation(opacity=1, duration=0.3, s=1/15).start(

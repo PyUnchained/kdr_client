@@ -5,9 +5,8 @@
 # Embedded file name: /home/tatenda/workspace/kdr_package/kdr_client/kivy_django_restful/utils/threading.py
 # Compiled at: 2022-03-15 12:14:41
 # Size of source mod 2**32: 190 bytes
-import threading, wrapt
+import threading
 
-@wrapt.decorator
 def background_thread(wrapped, instance, args, kwargs):
     t = threading.Thread(target=wrapped, args=args, kwargs=kwargs)
     t.start()

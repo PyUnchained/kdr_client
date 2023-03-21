@@ -4,9 +4,6 @@ import functools
 from copy import copy
 import asyncio
 
-
-from django.core.exceptions import SynchronousOnlyOperation
-
 from kivy.animation import Animation
 from kivy.app import App
 from kivy.clock import Clock

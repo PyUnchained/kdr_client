@@ -1,4 +1,5 @@
 from copy import copy
+import ssl, certifi
 import websockets, asyncio
 
 

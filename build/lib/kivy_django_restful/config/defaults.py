@@ -11,4 +11,4 @@ DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 USE_TZ = True
 WS_TIMEOUT = 15
 FORM_WIDGET_CLASS = 'kivy_django_restful.uix.forms.widget.FormWidget'
-LOGFILE = Path(BASE_DIR, 'log.log')
+# LOGFILE = Path(BASE_DIR, 'log.log')
